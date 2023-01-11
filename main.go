@@ -1,64 +1,43 @@
 package main
 
 import (
+	"context"
 	"encoding/base64"
 	"fmt"
-	"io/ioutil"
 	"log"
+	"os"
 
-	"golang.org/x/oauth2"
+	"github.com/aiteung/atmq/helper"
 	"golang.org/x/oauth2/google"
 	"google.golang.org/api/gmail/v1"
+	"google.golang.org/api/option"
 )
 
 func main() {
-	// Reads in our credentials
-	secret, err := ioutil.ReadFile("client_secret.json")
+	ctx := context.Background()
+	b, err := os.ReadFile("client_secret.json")
 	if err != nil {
-		log.Printf("Error: %v", err)
+		log.Fatalf("Unable to read client secret file: %v", err)
 	}
 
-	// Creates a oauth2.Config using the secret
-	// The second parameter is the scope, in this case we only want to send email
-	conf, err := google.ConfigFromJSON(secret, gmail.GmailSendScope)
+	// If modifying these scopes, delete your previously saved token.json.
+	config, err := google.ConfigFromJSON(b, gmail.GmailSendScope)
 	if err != nil {
-		log.Printf("Error: %v", err)
+		log.Fatalf("Unable to parse client secret file to config: %v", err)
+	}
+	client := helper.GetClient(config)
+
+	srv, err := gmail.NewService(ctx, option.WithHTTPClient(client))
+	if err != nil {
+		log.Fatalf("Unable to retrieve Gmail client: %v", err)
 	}
 
-	// Creates a URL for the user to follow
-	url := conf.AuthCodeURL("CSRF", oauth2.AccessTypeOffline)
-	// Prints the URL to the terminal
-	fmt.Printf("Visit this URL: \n %v \n", url)
-
-	// Grabs the authorization code you paste into the terminal
-	var code string
-	_, err = fmt.Scan(&code)
-	if err != nil {
-		log.Printf("Error: %v", err)
-	}
-
-	// Exchange the auth code for an access token
-	tok, err := conf.Exchange(oauth2.NoContext, code)
-	if err != nil {
-		log.Printf("Error: %v", err)
-	}
-
-	// Create the *http.Client using the access token
-	client := conf.Client(oauth2.NoContext, tok)
-
-	// Create a new gmail service using the client
-	gmailService, err := gmail.New(client)
-	if err != nil {
-		log.Printf("Error: %v", err)
-	}
-
-	// New message for our gmail service to send
 	var message gmail.Message
 
 	// Compose the message
 	messageStr := []byte(
 		"From: youremail@gmail.com\r\n" +
-			"To: recipient@gmail.com\r\n" +
+			"To: awangga@gmail.com\r\n" +
 			"Subject: My first Gmail API message\r\n\r\n" +
 			"Message body goes here!")
 
@@ -66,10 +45,11 @@ func main() {
 	message.Raw = base64.URLEncoding.EncodeToString(messageStr)
 
 	// Send the message
-	_, err = gmailService.Users.Messages.Send("me", &message).Do()
+	_, err = srv.Users.Messages.Send("me", &message).Do()
 	if err != nil {
 		log.Printf("Error: %v", err)
 	} else {
 		fmt.Println("Message sent!")
 	}
+
 }
