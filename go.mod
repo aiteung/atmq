@@ -3,7 +3,7 @@ module github.com/aiteung/atmq
 go 1.19
 
 require (
-	github.com/aiteung/atmail v0.0.2
+	github.com/aiteung/atmail v0.0.3
 	golang.org/x/oauth2 v0.4.0
 	google.golang.org/api v0.106.0
 )
